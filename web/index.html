@@ -1,38 +1,286 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flor para Sara - Mi Amor 💕</title>
+    <meta name="description" content="Una hermosa flor dibujada especialmente para Sara">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FFA216">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
+        body {
+            background: #000;
+            color: #FFA216;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
 
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+        #canvas {
+            border: 2px solid #FFA216;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(255, 162, 22, 0.3);
+            max-width: 90vw;
+            max-height: 90vh;
+        }
 
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
-  <base href="$FLUTTER_BASE_HREF">
+        .title {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 162, 22, 0.5);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
 
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+        .subtitle {
+            font-size: 1rem;
+            text-align: center;
+            margin-bottom: 30px;
+            opacity: 0.8;
+        }
 
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="miamor">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+        button {
+            background: linear-gradient(45deg, #FFA216, #FFD700);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 162, 22, 0.3);
+        }
 
-  <title>miamor</title>
-  <link rel="manifest" href="manifest.json">
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 162, 22, 0.5);
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 10px rgba(255, 162, 22, 0.5); }
+            to { text-shadow: 0 0 20px rgba(255, 162, 22, 1), 0 0 30px rgba(255, 162, 22, 0.8); }
+        }
+
+        .heart {
+            color: #ff1744;
+            font-size: 1.5em;
+            animation: heartbeat 1.5s ease-in-out infinite;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @media (max-width: 768px) {
+            .title { font-size: 1.5rem; }
+            .subtitle { font-size: 0.9rem; }
+            button { padding: 10px 20px; font-size: 0.9rem; }
+        }
+    </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+    <div class="title">Flor para Sara <span class="heart">💕</span></div>
+    <div class="subtitle">Un regalo dibujado con amor especialmente para ti</div>
+    
+    <canvas id="canvas" width="800" height="600"></canvas>
+    
+    <div class="controls">
+        <button onclick="drawFlower()">🌸 Dibujar Flor</button>
+        <button onclick="clearCanvas()">🔄 Limpiar</button>
+        <button onclick="downloadImage()">📱 Descargar</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        // Ajustar canvas para dispositivos móviles
+        function resizeCanvas() {
+            const maxWidth = Math.min(window.innerWidth * 0.9, 800);
+            const maxHeight = Math.min(window.innerHeight * 0.6, 600);
+            
+            canvas.width = maxWidth;
+            canvas.height = maxHeight;
+            
+            // Reescalar el contexto
+            const scale = Math.min(maxWidth / 800, maxHeight / 600);
+            ctx.scale(scale, scale);
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawPoint(x, y, color = '#FFF', size = 4) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function drawFlowerPetals() {
+            const centerX = 400;
+            const centerY = 340;
+            
+            ctx.strokeStyle = '#FFA216';
+            ctx.lineWidth = 2;
+            
+            for (let i = 0; i < 16; i++) {
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate((i * 24) * Math.PI / 180);
+                
+                for (let j = 0; j < 18; j++) {
+                    const radius = 150 - j * 6;
+                    
+                    // Primera curva
+                    ctx.beginPath();
+                    ctx.arc(0, 0, radius, 0, Math.PI / 2);
+                    ctx.stroke();
+                    
+                    // Segunda curva
+                    ctx.beginPath();
+                    ctx.arc(0, -radius, radius, Math.PI / 2, Math.PI);
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        function drawFlowerCenter() {
+            const centerX = 400;
+            const centerY = 340;
+            const goldenAngle = 137.508 * Math.PI / 180;
+            
+            ctx.fillStyle = '#884513';
+            
+            for (let i = 0; i < 140; i++) {
+                const r = 4 * Math.sqrt(i);
+                const theta = i * goldenAngle;
+                const x = r * Math.cos(theta);
+                const y = r * Math.sin(theta);
+                
+                drawPoint(centerX + x, centerY + y, '#884513', 2);
+            }
+        }
+
+        function drawS(x, y) {
+            const positions = [
+                [x, y], [x + 5, y], [x + 10, y], [x + 15, y],
+                [x, y - 5], [x, y - 10], [x, y - 15],
+                [x + 5, y - 15], [x + 10, y - 15], [x + 15, y - 15],
+                [x + 20, y - 20], [x + 20, y - 25],
+                [x, y - 30], [x + 5, y - 30], [x + 10, y - 30], [x + 15, y - 30]
+            ];
+            
+            positions.forEach(pos => drawPoint(pos[0], pos[1], '#FFF', 3));
+        }
+
+        function drawA(x, y) {
+            const positions = [
+                [x - 6, y], [x - 12, y], [x - 18, y],
+                [x, y - 6], [x, y - 12], [x, y - 18], [x, y - 24], [x, y - 30],
+                [x - 24, y - 6], [x - 24, y - 12], [x - 24, y - 18], [x - 24, y - 24], [x - 24, y - 30],
+                [x - 6, y - 18], [x - 12, y - 18], [x - 18, y - 18]
+            ];
+            
+            positions.forEach(pos => drawPoint(pos[0], pos[1], '#FFF', 3));
+        }
+
+        function drawR(x, y) {
+            const positions = [
+                [x, y], [x, y + 6], [x, y + 12], [x, y + 18], [x, y + 24], [x, y + 30],
+                [x + 6, y + 30], [x + 12, y + 30], [x + 18, y + 20], [x + 18, y + 25],
+                [x + 12, y + 15], [x + 6, y + 15], [x + 6, y + 10], [x + 12, y + 6], [x + 18, y + 2]
+            ];
+            
+            positions.forEach(pos => drawPoint(pos[0], pos[1], '#FFF', 3));
+        }
+
+        function drawLetters() {
+            const baseY = 500;
+            drawS(340, baseY);   // S
+            drawA(395, baseY);   // A
+            drawR(440, baseY);   // R
+            drawA(495, baseY);   // A
+        }
+
+        async function drawFlower() {
+            if (isDrawing) return;
+            isDrawing = true;
+            
+            clearCanvas();
+            
+            // Título
+            ctx.fillStyle = '#FFA216';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Para mi amor Sara 💕', 400, 50);
+            
+            // Dibujar con animación
+            await animateDrawing();
+            
+            isDrawing = false;
+        }
+
+        async function animateDrawing() {
+            // Pétalos con animación
+            drawFlowerPetals();
+            await sleep(1000);
+            
+            // Centro con animación
+            drawFlowerCenter();
+            await sleep(1000);
+            
+            // Letras con animación
+            drawLetters();
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'flor-para-sara.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // Inicializar
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            clearCanvas();
+            drawFlower();
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
 </body>
 </html>

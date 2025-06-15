@@ -166,15 +166,15 @@
         <button id="drawBtn" onclick="drawFlower()">🌸 Dibujar Flor</button>
         <button onclick="clearCanvas()">🔄 Limpiar</button>
         <button onclick="downloadCanvas()">📱 Descargar</button>
-        <button id="musicBtn" onclick="toggleMusic()">🎵 Música</button>
     </div>
     
-    <div class="audio-controls">
+    <div class="audio-controls" style="display: none;">
         <div class="volume-control">
             <span>🔊</span>
             <input type="range" id="volumeSlider" min="0" max="100" value="30">
             <span id="volumeText">30%</span>
         </div>
+        <button id="musicBtn" onclick="toggleMusic()" style="padding: 8px 16px; font-size: 0.8rem;">⏸️ Pausar Música</button>
     </div>
     
     <!-- Audio element mejorado -->
@@ -206,9 +206,11 @@
         const musicInfo = document.getElementById('musicInfo');
         const volumeSlider = document.getElementById('volumeSlider');
         const volumeText = document.getElementById('volumeText');
+        const audioControls = document.querySelector('.audio-controls');
         
         let isDrawing = false;
         let isPlaying = false;
+        let autoPlayAttempted = false;
         let x = 0, y = 0;
         let angle = 0;
         let penDown = true;
@@ -239,12 +241,15 @@
         
         audio.addEventListener('play', function() {
             musicInfo.style.display = 'block';
+            audioControls.style.display = 'flex';
             musicBtn.classList.add('music-playing');
+            isPlaying = true;
         });
         
         audio.addEventListener('pause', function() {
             musicInfo.style.display = 'none';
             musicBtn.classList.remove('music-playing');
+            isPlaying = false;
         });
         
         // Configurar canvas
@@ -321,11 +326,12 @@
             drawBtn.disabled = true;
             progressDiv.innerHTML = 'Dibujando la flor... <span class="loading"></span>';
             
-            // Iniciar música automáticamente al dibujar
+            // La música ya debería estar reproduciéndose automáticamente
+            // Solo mostrar mensaje si no está sonando
             if (!isPlaying) {
                 setTimeout(() => {
                     tryAutoPlayMusic();
-                }, 1000);
+                }, 500);
             }
             
             // Limpiar canvas
@@ -474,43 +480,50 @@
         
         // Función mejorada para controlar la música
         function toggleMusic() {
-            if (!isPlaying) {
+            if (isPlaying) {
+                audio.pause();
+                musicBtn.textContent = '▶️ Reanudar Música';
+                progressDiv.textContent = '🎵 Música pausada';
+            } else {
                 audio.play().then(() => {
-                    isPlaying = true;
-                    musicBtn.textContent = '⏸️ Pausar';
-                    musicBtn.classList.add('music-playing');
+                    musicBtn.textContent = '⏸️ Pausar Música';
                     progressDiv.textContent = '🎵 Reproduciendo canción especial para Sara...';
                 }).catch(error => {
                     console.error('Error reproduciendo audio:', error);
-                    progressDiv.textContent = '⚠️ Haz clic para activar la música (política del navegador)';
+                    progressDiv.textContent = '⚠️ Error al reproducir música';
                 });
-            } else {
-                audio.pause();
-                isPlaying = false;
-                musicBtn.textContent = '🎵 Música';
-                musicBtn.classList.remove('music-playing');
-                progressDiv.textContent = '🎵 Música pausada';
             }
         }
         
         // Función para intentar reproducir automáticamente
         function tryAutoPlayMusic() {
-            audio.play().then(() => {
-                isPlaying = true;
-                musicBtn.textContent = '⏸️ Pausar';
-                musicBtn.classList.add('music-playing');
-                progressDiv.textContent = '🎵 ¡Música especial para Sara activada!';
-            }).catch(error => {
-                console.log('Auto-play bloqueado. Sara necesita hacer clic en el botón de música.');
-                progressDiv.textContent = '🎵 Haz clic en "Música" para escuchar tu canción especial';
-            });
+            if (!autoPlayAttempted) {
+                autoPlayAttempted = true;
+                audio.play().then(() => {
+                    progressDiv.textContent = '🎵 ¡Música especial activada para Sara!';
+                }).catch(error => {
+                    console.log('Auto-play bloqueado por el navegador');
+                    // Intentamos en la primera interacción del usuario
+                    document.addEventListener('click', function firstClick() {
+                        audio.play().then(() => {
+                            progressDiv.textContent = '🎵 ¡Música especial activada para Sara!';
+                        }).catch(e => console.log('Audio aún no disponible'));
+                        document.removeEventListener('click', firstClick);
+                    }, { once: true });
+                });
+            }
         }
         
-        // Mensaje de bienvenida con instrucciones
+        // Mensaje de bienvenida con instrucciones y auto-inicio de música
         window.addEventListener('load', function() {
             setTimeout(() => {
                 progressDiv.textContent = '💕 ¡Hola Sara! Haz clic en "Dibujar Flor" para tu sorpresa';
+                // Intentar reproducir música inmediatamente
+                tryAutoPlayMusic();
             }, 1000);
+            
+            // También intentar cuando Sara haga cualquier clic
+            document.addEventListener('click', tryAutoPlayMusic, { once: true });
         });
     </script>
 </body>

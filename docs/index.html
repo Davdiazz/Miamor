@@ -71,6 +71,14 @@
             cursor: not-allowed;
             transform: none;
         }
+        .music-playing {
+            background: linear-gradient(45deg, #ff4757, #ff6b7a) !important;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
         @keyframes glow {
             from { text-shadow: 0 0 10px rgba(255, 162, 22, 0.5); }
             to { text-shadow: 0 0 20px rgba(255, 162, 22, 1), 0 0 30px rgba(255, 162, 22, 0.8); }
@@ -101,11 +109,48 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        .music-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 162, 22, 0.1);
+            border-radius: 10px;
+            font-size: 0.8rem;
+            max-width: 400px;
+            text-align: center;
+        }
+        .audio-controls {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #volumeSlider {
+            width: 80px;
+            height: 5px;
+            background: #333;
+            outline: none;
+            border-radius: 5px;
+        }
+        #volumeSlider::-webkit-slider-thumb {
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: #FFA216;
+            border-radius: 50%;
+            cursor: pointer;
+        }
         @media (max-width: 768px) {
             .title { font-size: 1.5rem; }
             .subtitle { font-size: 0.9rem; }
             button { padding: 10px 20px; font-size: 0.9rem; }
             #canvas { width: 350px; height: 350px; }
+            .audio-controls { flex-direction: column; gap: 5px; }
         }
     </style>
 </head>
@@ -121,7 +166,34 @@
         <button id="drawBtn" onclick="drawFlower()">🌸 Dibujar Flor</button>
         <button onclick="clearCanvas()">🔄 Limpiar</button>
         <button onclick="downloadCanvas()">📱 Descargar</button>
+        <button id="musicBtn" onclick="toggleMusic()">🎵 Música</button>
     </div>
+    
+    <div class="audio-controls">
+        <div class="volume-control">
+            <span>🔊</span>
+            <input type="range" id="volumeSlider" min="0" max="100" value="30">
+            <span id="volumeText">30%</span>
+        </div>
+    </div>
+    
+    <!-- Audio element mejorado -->
+    <audio id="backgroundMusic" loop preload="auto">
+        <!-- Tu canción personalizada (la principal) -->
+        <source src="./assets/cancion-para-sara.mp3" type="audio/mpeg">
+        <source src="./assets/cancion-para-sara.ogg" type="audio/ogg">
+        
+        <!-- Fallbacks en caso de que no cargue tu canción -->
+        <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" type="audio/mpeg">
+        <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+        
+        Tu navegador no soporta audio HTML5.
+    </audio>
+    
+    <div class="music-info" id="musicInfo" style="display: none;">
+        🎵 Reproduciendo: "Canción especial para Sara"
+    </div>
+    
     <div class="progress" id="progress">¡Listo para dibujar! 🌸</div>
     
     <script>
@@ -129,17 +201,57 @@
         const ctx = canvas.getContext('2d');
         const progressDiv = document.getElementById('progress');
         const drawBtn = document.getElementById('drawBtn');
+        const musicBtn = document.getElementById('musicBtn');
+        const audio = document.getElementById('backgroundMusic');
+        const musicInfo = document.getElementById('musicInfo');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volumeText = document.getElementById('volumeText');
         
         let isDrawing = false;
+        let isPlaying = false;
         let x = 0, y = 0;
         let angle = 0;
         let penDown = true;
+        
+        // Configurar audio
+        audio.volume = 0.3;
+        
+        // Control de volumen
+        volumeSlider.addEventListener('input', function() {
+            const volume = this.value / 100;
+            audio.volume = volume;
+            volumeText.textContent = this.value + '%';
+        });
+        
+        // Eventos de audio
+        audio.addEventListener('loadstart', function() {
+            progressDiv.textContent = '🎵 Cargando música...';
+        });
+        
+        audio.addEventListener('canplay', function() {
+            progressDiv.textContent = '🎵 Música lista para reproducir';
+        });
+        
+        audio.addEventListener('error', function(e) {
+            console.error('Error cargando audio:', e);
+            progressDiv.textContent = '⚠️ No se pudo cargar la música personalizada';
+        });
+        
+        audio.addEventListener('play', function() {
+            musicInfo.style.display = 'block';
+            musicBtn.classList.add('music-playing');
+        });
+        
+        audio.addEventListener('pause', function() {
+            musicInfo.style.display = 'none';
+            musicBtn.classList.remove('music-playing');
+        });
         
         // Configurar canvas
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Funciones de turtle simuladas
+        // Funciones de turtle simuladas (mantienen el código original)
         function goto(newX, newY) {
             x = newX + canvas.width / 2;
             y = canvas.height / 2 - newY;
@@ -201,13 +313,20 @@
             ctx.fill();
         }
         
-        // Función principal de dibujo
+        // Función principal de dibujo mejorada
         async function drawFlower() {
             if (isDrawing) return;
             
             isDrawing = true;
             drawBtn.disabled = true;
             progressDiv.innerHTML = 'Dibujando la flor... <span class="loading"></span>';
+            
+            // Iniciar música automáticamente al dibujar
+            if (!isPlaying) {
+                setTimeout(() => {
+                    tryAutoPlayMusic();
+                }, 1000);
+            }
             
             // Limpiar canvas
             ctx.fillStyle = 'black';
@@ -229,15 +348,12 @@
                         circle(150 - j * 6, 90);
                         right(180);
                         
-                        // Pausa para animación
-                        if (j % 3 === 0) {
-                            await new Promise(resolve => setTimeout(resolve, 10));
+                        if (j % 2 === 0) {
+                            await new Promise(resolve => setTimeout(resolve, 30));
                         }
                     }
                     circle(40, 24);
-                    
-                    // Pausa entre pétalos
-                    await new Promise(resolve => setTimeout(resolve, 50));
+                    await new Promise(resolve => setTimeout(resolve, 150));
                 }
                 
                 // Dibujar centro de la flor
@@ -245,8 +361,8 @@
                 const goldenAngle = 137.508;
                 const phi = goldenAngle * (Math.PI / 180);
                 
-                for (let i = 0; i < 140; i++) {
-                    const r = 4 * Math.sqrt(i);
+                for (let i = 0; i < 280; i++) {
+                    const r = 3 * Math.sqrt(i);
                     const theta = i * phi;
                     const centerX = r * Math.cos(theta);
                     const centerY = r * Math.sin(theta);
@@ -255,14 +371,31 @@
                     goto(centerX, centerY);
                     pendown();
                     
-                    fillCircle(2);
+                    fillCircle(1.5);
                     
-                    if (i % 10 === 0) {
-                        await new Promise(resolve => setTimeout(resolve, 5));
+                    if (i % 15 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 15));
                     }
                 }
                 
-                // Dibujar texto "SARA"
+                setColor('#654321');
+                for (let i = 0; i < 280; i++) {
+                    const r = 3 * Math.sqrt(i);
+                    const theta = i * phi + 1;
+                    const centerX = r * Math.cos(theta);
+                    const centerY = r * Math.sin(theta);
+                    
+                    penup();
+                    goto(centerX + 1, centerY + 1);
+                    pendown();
+                    
+                    fillCircle(1);
+                    
+                    if (i % 20 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                    }
+                }
+                
                 await drawText();
                 
                 progressDiv.textContent = '¡Flor completada para Sara! 🌸💕';
@@ -279,7 +412,6 @@
         async function drawText() {
             setColor('white');
             
-            // Función para dibujar punto
             function point(x, y) {
                 penup();
                 goto(x, y);
@@ -287,7 +419,6 @@
                 fillCircle(4);
             }
             
-            // Dibujar S
             const sPositions = [
                 [0, 0], [5, 0], [10, 0], [15, 0],
                 [0, -5], [0, -10], [0, -15], [5, -15], [10, -15], [15, -15], [20, -20], [20, -25],
@@ -296,10 +427,9 @@
             
             for (let pos of sPositions) {
                 point(pos[0] - 60, pos[1]);
-                await new Promise(resolve => setTimeout(resolve, 20));
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
             
-            // Dibujar A
             const aPositions = [
                 [-6, 0], [-12, 0], [-18, 0],
                 [0, -6], [0, -12], [0, -18], [0, -24], [0, -30],
@@ -309,10 +439,9 @@
             
             for (let pos of aPositions) {
                 point(pos[0] - 5, pos[1]);
-                await new Promise(resolve => setTimeout(resolve, 20));
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
             
-            // Dibujar R
             const rPositions = [
                 [0, 0], [0, 6], [0, 12], [0, 18], [0, 24], [0, 30],
                 [6, 30], [12, 30], [18, 20], [18, 25], [12, 15], [6, 15],
@@ -321,13 +450,12 @@
             
             for (let pos of rPositions) {
                 point(pos[0] + 10, pos[1] - 30);
-                await new Promise(resolve => setTimeout(resolve, 20));
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
             
-            // Dibujar segunda A
             for (let pos of aPositions) {
                 point(pos[0] + 70, pos[1]);
-                await new Promise(resolve => setTimeout(resolve, 20));
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
         }
         
@@ -343,6 +471,47 @@
             link.href = canvas.toDataURL();
             link.click();
         }
+        
+        // Función mejorada para controlar la música
+        function toggleMusic() {
+            if (!isPlaying) {
+                audio.play().then(() => {
+                    isPlaying = true;
+                    musicBtn.textContent = '⏸️ Pausar';
+                    musicBtn.classList.add('music-playing');
+                    progressDiv.textContent = '🎵 Reproduciendo canción especial para Sara...';
+                }).catch(error => {
+                    console.error('Error reproduciendo audio:', error);
+                    progressDiv.textContent = '⚠️ Haz clic para activar la música (política del navegador)';
+                });
+            } else {
+                audio.pause();
+                isPlaying = false;
+                musicBtn.textContent = '🎵 Música';
+                musicBtn.classList.remove('music-playing');
+                progressDiv.textContent = '🎵 Música pausada';
+            }
+        }
+        
+        // Función para intentar reproducir automáticamente
+        function tryAutoPlayMusic() {
+            audio.play().then(() => {
+                isPlaying = true;
+                musicBtn.textContent = '⏸️ Pausar';
+                musicBtn.classList.add('music-playing');
+                progressDiv.textContent = '🎵 ¡Música especial para Sara activada!';
+            }).catch(error => {
+                console.log('Auto-play bloqueado. Sara necesita hacer clic en el botón de música.');
+                progressDiv.textContent = '🎵 Haz clic en "Música" para escuchar tu canción especial';
+            });
+        }
+        
+        // Mensaje de bienvenida con instrucciones
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                progressDiv.textContent = '💕 ¡Hola Sara! Haz clic en "Dibujar Flor" para tu sorpresa';
+            }, 1000);
+        });
     </script>
 </body>
 </html>

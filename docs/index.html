@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flor para Sara - Mi Amor 💕</title>
-    <meta name="description" content="Una hermosa flor dibujada especialmente para Sara">
     <style>
         * {
             margin: 0;
@@ -22,14 +21,6 @@
             min-height: 100vh;
             overflow-x: hidden;
         }
-        #canvas {
-            border: 2px solid #FFA216;
-            border-radius: 15px;
-            box-shadow: 0 0 30px rgba(255, 162, 22, 0.3);
-            max-width: 90vw;
-            max-height: 90vh;
-            background: #000;
-        }
         .title {
             font-size: 2rem;
             text-align: center;
@@ -42,6 +33,18 @@
             text-align: center;
             margin-bottom: 30px;
             opacity: 0.8;
+        }
+        #canvas-container {
+            border: 2px solid #FFA216;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(255, 162, 22, 0.3);
+            background: #000;
+            padding: 10px;
+            position: relative;
+        }
+        #canvas {
+            background: black;
+            border-radius: 10px;
         }
         .controls {
             margin-top: 20px;
@@ -86,10 +89,23 @@
             font-size: 0.9rem;
             opacity: 0.7;
         }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #FFA216;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
         @media (max-width: 768px) {
             .title { font-size: 1.5rem; }
             .subtitle { font-size: 0.9rem; }
             button { padding: 10px 20px; font-size: 0.9rem; }
+            #canvas { width: 350px; height: 350px; }
         }
     </style>
 </head>
@@ -97,270 +113,236 @@
     <div class="title">Flor para Sara <span class="heart">💕</span></div>
     <div class="subtitle">Un regalo dibujado con amor especialmente para ti</div>
     
-    <canvas id="canvas" width="800" height="600"></canvas>
+    <div id="canvas-container">
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
     
     <div class="controls">
-        <button id="drawBtn" onclick="startDrawing()">🌸 Dibujar Flor</button>
+        <button id="drawBtn" onclick="drawFlower()">🌸 Dibujar Flor</button>
         <button onclick="clearCanvas()">🔄 Limpiar</button>
-        <button onclick="downloadImage()">📱 Descargar</button>
+        <button onclick="downloadCanvas()">📱 Descargar</button>
     </div>
-    <div class="progress" id="progress"></div>
+    <div class="progress" id="progress">¡Listo para dibujar! 🌸</div>
     
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const drawBtn = document.getElementById('drawBtn');
         const progressDiv = document.getElementById('progress');
+        const drawBtn = document.getElementById('drawBtn');
         
         let isDrawing = false;
-        let animationId;
-
+        let x = 0, y = 0;
+        let angle = 0;
+        let penDown = true;
+        
         // Configurar canvas
-        function setupCanvas() {
-            canvas.width = 800;
-            canvas.height = 600;
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Funciones de turtle simuladas
+        function goto(newX, newY) {
+            x = newX + canvas.width / 2;
+            y = canvas.height / 2 - newY;
         }
-
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            progressDiv.textContent = '';
-        }
-
-        // Función para dibujar líneas con animación
-        function drawAnimatedLine(x1, y1, x2, y2, color = '#FFA216', lineWidth = 1) {
-            return new Promise(resolve => {
-                ctx.strokeStyle = color;
-                ctx.lineWidth = lineWidth;
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.stroke();
-                setTimeout(resolve, 5); // Pequeña pausa para la animación
-            });
-        }
-
-        // Función para dibujar arcos con animación
-        function drawAnimatedArc(centerX, centerY, radius, startAngle, endAngle, color = '#FFA216', lineWidth = 1) {
-            return new Promise(resolve => {
-                ctx.strokeStyle = color;
-                ctx.lineWidth = lineWidth;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-                ctx.stroke();
-                setTimeout(resolve, 5);
-            });
-        }
-
-        // Función para dibujar un pétalo ovalado como en Python Turtle
-        async function drawOvalPetal(centerX, centerY, angle, size = 1) {
-            const petalLength = 150 * size;
-            const petalLayers = 18;
+        
+        function forward(distance) {
+            const newX = x + Math.cos(angle * Math.PI / 180) * distance;
+            const newY = y + Math.sin(angle * Math.PI / 180) * distance;
             
-            ctx.save();
-            ctx.translate(centerX, centerY);
-            ctx.rotate(angle);
-            
-            for (let layer = 0; layer < petalLayers; layer++) {
-                const layerRadius = petalLength - (layer * 8);
-                if (layerRadius <= 0) break;
-                
-                ctx.strokeStyle = '#FFA216';
-                ctx.lineWidth = 1;
+            if (penDown) {
                 ctx.beginPath();
-                
-                // Primera parte del óvalo - semicírculo superior
-                ctx.arc(0, 0, layerRadius, 0, Math.PI);
+                ctx.moveTo(x, y);
+                ctx.lineTo(newX, newY);
                 ctx.stroke();
-                
-                // Segunda parte del óvalo - semicírculo inferior desplazado
-                ctx.beginPath();
-                ctx.arc(0, -layerRadius, layerRadius, Math.PI, 2 * Math.PI);
-                ctx.stroke();
-                
-                await new Promise(resolve => setTimeout(resolve, 20));
             }
             
-            ctx.restore();
+            x = newX;
+            y = newY;
         }
-
-        // Función para dibujar todos los pétalos ovalados
-        async function drawAllPetals() {
-            const centerX = 400;
-            const centerY = 300;
-            const petalCount = 16; // Como en el original de Python
-            
-            progressDiv.textContent = 'Dibujando pétalos ovalados...';
-            
-            for (let i = 0; i < petalCount; i++) {
-                const angle = (i * 22.5) * Math.PI / 180; // 360/16 = 22.5 grados
-                await drawOvalPetal(centerX, centerY, angle);
-                
-                const progress = Math.round(((i + 1) / petalCount) * 100);
-                progressDiv.textContent = `Dibujando pétalo ${i + 1} de ${petalCount}... ${progress}%`;
-            }
+        
+        function right(degrees) {
+            angle += degrees;
         }
-
-        // Eliminar funciones que no necesitamos
-        async function drawSecondaryPetals() {
-            // No necesitamos pétalos secundarios para replicar el original
-            return;
+        
+        function left(degrees) {
+            angle -= degrees;
         }
-
-        async function drawFloralDetails(centerX, centerY) {
-            // No necesitamos detalles adicionales para replicar el original
-            return;
-        }
-
-        // Función para dibujar el centro en espiral simple como en Python
-        async function drawCenter() {
-            const centerX = 400;
-            const centerY = 300;
-            const goldenAngle = 137.508 * Math.PI / 180;
-            const pointCount = 200; // Como en el original
+        
+        function circle(radius, extent = 360) {
+            const steps = Math.abs(extent);
+            const stepAngle = extent / steps;
             
-            progressDiv.textContent = 'Dibujando centro en espiral...';
-            
-            ctx.fillStyle = '#8B4513'; // Color marrón para el centro
-            
-            for (let i = 0; i < pointCount; i++) {
-                const r = 4 * Math.sqrt(i);
-                const theta = i * goldenAngle;
-                const x = centerX + r * Math.cos(theta);
-                const y = centerY + r * Math.sin(theta);
-                
-                ctx.beginPath();
-                ctx.arc(x, y, 2, 0, 2 * Math.PI);
-                ctx.fill();
-                
-                if (i % 10 === 0) {
-                    const progress = Math.round(((i + 1) / pointCount) * 100);
-                    progressDiv.textContent = `Dibujando centro... ${progress}%`;
-                    await new Promise(resolve => setTimeout(resolve, 30));
+            for (let i = 0; i < steps; i++) {
+                forward(2 * Math.PI * Math.abs(radius) / 360 * Math.abs(stepAngle));
+                if (radius > 0) {
+                    left(stepAngle);
+                } else {
+                    right(stepAngle);
                 }
             }
         }
-
-        // Función para dibujar texto simple como en Python
-        async function drawPixelText() {
-            progressDiv.textContent = 'Escribiendo SARA...';
-            
-            const centerX = 400;
-            const centerY = 300;
-            const pixelSize = 4;
-            
-            // Letras simples como en el original de Python
-            const letters = {
-                S: [
-                    [1,1,1,1,1],
-                    [1,0,0,0,0],
-                    [1,0,0,0,0],
-                    [1,1,1,1,0],
-                    [0,0,0,0,1],
-                    [0,0,0,0,1],
-                    [1,1,1,1,1]
-                ],
-                A: [
-                    [0,1,1,1,0],
-                    [1,0,0,0,1],
-                    [1,0,0,0,1],
-                    [1,1,1,1,1],
-                    [1,0,0,0,1],
-                    [1,0,0,0,1],
-                    [1,0,0,0,1]
-                ],
-                R: [
-                    [1,1,1,1,0],
-                    [1,0,0,0,1],
-                    [1,0,0,0,1],
-                    [1,1,1,1,0],
-                    [1,0,1,0,0],
-                    [1,0,0,1,0],
-                    [1,0,0,0,1]
-                ]
-            };
-            
-            const word = ['S', 'A', 'R', 'A'];
-            const letterSpacing = 40;
-            const startX = centerX - (word.length * letterSpacing) / 2;
-            
-            ctx.fillStyle = '#FFFFFF';
-            
-            for (let letterIndex = 0; letterIndex < word.length; letterIndex++) {
-                const letter = letters[word[letterIndex]];
-                const letterX = startX + letterIndex * letterSpacing;
-                
-                for (let row = 0; row < letter.length; row++) {
-                    for (let col = 0; col < letter[row].length; col++) {
-                        if (letter[row][col] === 1) {
-                            const pixelX = letterX + col * pixelSize;
-                            const pixelY = centerY - 20 + row * pixelSize;
-                            
-                            ctx.fillRect(pixelX, pixelY, pixelSize, pixelSize);
-                            await new Promise(resolve => setTimeout(resolve, 50));
-                        }
-                    }
-                }
-            }
+        
+        function setColor(color) {
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
         }
-
-        // Función principal para dibujar la flor completa
-        async function startDrawing() {
+        
+        function penup() {
+            penDown = false;
+        }
+        
+        function pendown() {
+            penDown = true;
+        }
+        
+        function fillCircle(radius) {
+            ctx.beginPath();
+            ctx.arc(x, y, Math.abs(radius), 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        
+        // Función principal de dibujo
+        async function drawFlower() {
             if (isDrawing) return;
             
             isDrawing = true;
             drawBtn.disabled = true;
+            progressDiv.innerHTML = 'Dibujando la flor... <span class="loading"></span>';
             
-            clearCanvas();
+            // Limpiar canvas
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Configurar líneas
+            ctx.lineWidth = 2;
             
             try {
-                // Dibujar pétalos ovalados como en Python
-                await drawAllPetals();
+                // Dibujar pétalos
+                setColor('#FFA216');
+                goto(0, -40);
                 
-                // Dibujar centro en espiral
-                await drawCenter();
+                for (let i = 0; i < 16; i++) {
+                    for (let j = 0; j < 18; j++) {
+                        right(90);
+                        circle(150 - j * 6, 90);
+                        left(90);
+                        circle(150 - j * 6, 90);
+                        right(180);
+                        
+                        // Pausa para animación
+                        if (j % 3 === 0) {
+                            await new Promise(resolve => setTimeout(resolve, 10));
+                        }
+                    }
+                    circle(40, 24);
+                    
+                    // Pausa entre pétalos
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
                 
-                // Dibujar texto SARA
-                await drawPixelText();
+                // Dibujar centro de la flor
+                setColor('#884513');
+                const goldenAngle = 137.508;
+                const phi = goldenAngle * (Math.PI / 180);
                 
-                progressDiv.textContent = '¡Flor completada exactamente como en Python! 🌸';
+                for (let i = 0; i < 140; i++) {
+                    const r = 4 * Math.sqrt(i);
+                    const theta = i * phi;
+                    const centerX = r * Math.cos(theta);
+                    const centerY = r * Math.sin(theta);
+                    
+                    penup();
+                    goto(centerX, centerY);
+                    pendown();
+                    
+                    fillCircle(2);
+                    
+                    if (i % 10 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 5));
+                    }
+                }
+                
+                // Dibujar texto "SARA"
+                await drawText();
+                
+                progressDiv.textContent = '¡Flor completada para Sara! 🌸💕';
                 
             } catch (error) {
                 console.error('Error al dibujar:', error);
-                progressDiv.textContent = 'Error al dibujar la flor';
+                progressDiv.textContent = 'Error al dibujar. Intenta de nuevo.';
             } finally {
                 isDrawing = false;
                 drawBtn.disabled = false;
             }
         }
-
-        function downloadImage() {
+        
+        async function drawText() {
+            setColor('white');
+            
+            // Función para dibujar punto
+            function point(x, y) {
+                penup();
+                goto(x, y);
+                pendown();
+                fillCircle(4);
+            }
+            
+            // Dibujar S
+            const sPositions = [
+                [0, 0], [5, 0], [10, 0], [15, 0],
+                [0, -5], [0, -10], [0, -15], [5, -15], [10, -15], [15, -15], [20, -20], [20, -25],
+                [0, -30], [5, -30], [10, -30], [15, -30]
+            ];
+            
+            for (let pos of sPositions) {
+                point(pos[0] - 60, pos[1]);
+                await new Promise(resolve => setTimeout(resolve, 20));
+            }
+            
+            // Dibujar A
+            const aPositions = [
+                [-6, 0], [-12, 0], [-18, 0],
+                [0, -6], [0, -12], [0, -18], [0, -24], [0, -30],
+                [-24, -6], [-24, -12], [-24, -18], [-24, -24], [-24, -30],
+                [-6, -18], [-12, -18], [-18, -18]
+            ];
+            
+            for (let pos of aPositions) {
+                point(pos[0] - 5, pos[1]);
+                await new Promise(resolve => setTimeout(resolve, 20));
+            }
+            
+            // Dibujar R
+            const rPositions = [
+                [0, 0], [0, 6], [0, 12], [0, 18], [0, 24], [0, 30],
+                [6, 30], [12, 30], [18, 20], [18, 25], [12, 15], [6, 15],
+                [6, 10], [12, 6], [18, 2]
+            ];
+            
+            for (let pos of rPositions) {
+                point(pos[0] + 10, pos[1] - 30);
+                await new Promise(resolve => setTimeout(resolve, 20));
+            }
+            
+            // Dibujar segunda A
+            for (let pos of aPositions) {
+                point(pos[0] + 70, pos[1]);
+                await new Promise(resolve => setTimeout(resolve, 20));
+            }
+        }
+        
+        function clearCanvas() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            progressDiv.textContent = 'Canvas limpiado';
+        }
+        
+        function downloadCanvas() {
             const link = document.createElement('a');
             link.download = 'flor-para-sara.png';
             link.href = canvas.toDataURL();
             link.click();
         }
-
-        // Inicializar
-        window.addEventListener('load', () => {
-            setupCanvas();
-        });
-
-        // Responsive canvas
-        function resizeCanvas() {
-            const container = canvas.parentElement;
-            const containerWidth = container.clientWidth;
-            const containerHeight = container.clientHeight;
-            
-            const scale = Math.min(containerWidth / 800, containerHeight / 600, 1);
-            canvas.style.transform = `scale(${scale})`;
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
     </script>
 </body>
 </html>
